@@ -14,23 +14,31 @@ export const handler: SQSHandler = async (event) => {
     if (snsMessage.Records) {
       for (const s3Message of snsMessage.Records) {
         const s3e = s3Message.s3;
-        const srcBucket = s3e.bucket.name;
         // Object key may have spaces or unicode non-ASCII characters.
         const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
-        try {
-          await ddbDocClient.send(
-            new PutCommand({
-              TableName: process.env.TABLE_NAME,
-              Item: {
-                name: srcKey,
-              },
-            })
-          );
 
-          console.log(`Saved image metadata: ${srcKey} from ${srcBucket}`);
-        } catch (error) {
-          console.log(error);
+        const typeMatch = srcKey.match(/\.([^.]*)$/);
+
+        if (!typeMatch) {
+          console.log("Could not determine the image type.");
+          throw new Error("Could not determine the image type.");
         }
+
+        const imageType = typeMatch[1].toLowerCase();
+        if (imageType !== "jpeg" && imageType !== "png") {
+          throw new Error(`Unsupported image type: ${imageType}`);
+        }
+
+        await ddbDocClient.send(
+          new PutCommand({
+            TableName: process.env.TABLE_NAME,
+            Item: {
+              name: srcKey,
+            },
+          })
+        );
+        
+        console.log(`Saved image metadata: ${srcKey}`);
       }
       }
     }
