@@ -5,10 +5,9 @@ export const handler: SQSHandler = async (event) => {
 
   for (const record of event.Records) {
     const recordBody = JSON.parse(record.body);
-    const snsMessage = JSON.parse(recordBody.Message); 
 
-    if (snsMessage.Records) {
-      for (const s3Message of snsMessage.Records) {
+    if (recordBody.Records) {
+      for (const s3Message of recordBody.Records) {
         const srcKey = decodeURIComponent(
           s3Message.s3.object.key.replace(/\+/g, " ")
         );
